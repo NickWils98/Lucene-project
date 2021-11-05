@@ -28,9 +28,15 @@ import java.util.*;
 
 public class opgave {
     public static void main(String[] args) throws IOException, ParseException {
-        IndexWriter iwriter = index();
-        runall(iwriter);
-//        tester("in chemical form what do subscripts tell you");
+        /*
+            calll indexer
+            call the searcher
+            delete indexfiles
+         */
+        IndexWriter iwriter = index(); // Eerst alles indexen
+//        runall(iwriter);
+
+    tester("what are the products and by products of photosynthesis?", iwriter);
         File folder = new File("./Index/");
         File[] listOfFiles = folder.listFiles();
         for(File file: listOfFiles) {
@@ -41,7 +47,9 @@ public class opgave {
     }
 
     public static void runall(IndexWriter iwriter) throws IOException, ParseException {
-
+        /*
+            go over all the queries and see if they are correct
+         */
         ReadCSVExample2 parser = new ReadCSVExample2();
         Map<String, String > r = parser.parse2("./resources/queries/small/dev_queries.tsv");
         Map<String, String > l = parser.parse("./resources/queries/small/dev_query_results_small.csv");
@@ -54,6 +62,9 @@ public class opgave {
             System.out.println(query);
             // get best result
             String filename = tester(query, iwriter);
+
+            // Van de output gaan we dat opsplitsen zodat we enkel de nummer krijgen en met da nummerke kunnen we dan
+            // in de dict vergelijken of da het nr is da we moesten hebben
             String filename2 = filename.split("output_")[1];
             filename2 = filename2.substring(0, filename2.length()-4);
 
@@ -75,7 +86,11 @@ public class opgave {
     }
 
     public static String tester(String input, IndexWriter iwriter)throws IOException, ParseException {
-        Analyzer analyzer = new StandardAnalyzer();
+        /*
+            search trough de Index map en find the best match for the query
+
+         */
+        Analyzer analyzer = new ClassicAnalyzer();
 
         Path index = Paths.get("./Index/");
         Directory directory = FSDirectory.open(index);
@@ -124,7 +139,7 @@ public class opgave {
 //    Directory directory = new RAMDirectory();
         // To store an index on disk, use this instead:
         Path index = Paths.get("./Index/");
-        Directory directory = FSDirectory.open(index);
+        Directory directory = FSDirectory.open(index); // Openen index
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         IndexWriter iwriter = new IndexWriter(directory, config);
         String data = ("./resources/full_docs_small/"); //output stored
