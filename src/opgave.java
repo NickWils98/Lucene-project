@@ -46,13 +46,18 @@ public class opgave {
         ReadCSVExample2 parser = new ReadCSVExample2();
         Map<String, String > r = parser.parse2("./resources/queries/small/dev_queries.tsv");
         Map<String, String > l = parser.parse("./resources/queries/small/dev_query_results_small.csv");
+
         int total = 0;int totalcoorect = 0;int totalfalse = 0;
+
         for(var k : l.keySet()){
+            // get query
             String query = r.get(k);
             System.out.println(query);
+            // get best result
             String filename = tester(query, iwriter);
             String filename2 = filename.split("output_")[1];
             filename2 = filename2.substring(0, filename2.length()-4);
+
             if(filename2.equals(l.get(k))) {
                 totalcoorect++;
                 System.out.println(totalcoorect+" Correct " + filename);
@@ -81,10 +86,12 @@ public class opgave {
 
         // Now search the index:
         // Parse a simple query that searches for "text":
+        // Ge gaat in contens zoeken
         QueryParser parser = new QueryParser("contents", analyzer);
-        Query query = parser.parse(input);
-        DirectoryReader ireader = DirectoryReader.open(directory);
-        IndexSearcher isearcher = new IndexSearcher(ireader);
+        Query query = parser.parse(input); // Welke input da ge ga zoeken
+
+        DirectoryReader ireader = DirectoryReader.open(directory); // In i reader nen dicteroy zetten
+        IndexSearcher isearcher = new IndexSearcher(ireader); // Met die reader ook een searcher aanmaken
 //        isearcher.setSimilarity(new BM25Similarity());
         ScoreDoc[] hits = isearcher.search(query, 1).scoreDocs;
 //        assertEquals(1, hits.length);
@@ -107,6 +114,9 @@ public class opgave {
     }
 
     public static IndexWriter index()throws IOException, ParseException {
+        /*
+        index all the output_xxx.txt files
+         */
         Analyzer analyzer = new StandardAnalyzer();
 
         // Store the index in memory:
@@ -116,12 +126,12 @@ public class opgave {
         Directory directory = FSDirectory.open(index);
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         IndexWriter iwriter = new IndexWriter(directory, config);
-        String data = ("./resources/full_docs_small/");
+        String data = ("./resources/full_docs_small/"); //output stored
 
         File[] files = new File(data).listFiles();
         assert files != null;
         for (File file : files) {
-
+            // enkel de txt files bekijken TODO kijk of da echt gebeurd
             String extension = ".txt";
 
             try {
@@ -132,11 +142,12 @@ public class opgave {
             } catch (Exception e) {
                 extension = "";
             }
+
             if (extension.equals(".txt")) {
                 Document doc = new Document();
-                String filename = file.getPath();
-                String content = Files.readString(Paths.get(filename));
-                FileReader x = new FileReader(file);
+                String filepath = file.getPath(); // relatief path van file
+                String content = Files.readString(Paths.get(filepath)); // first string in file TODO aanpassen
+//                FileReader x = new FileReader(file);
                 Field contentField = new Field("contents", content, TextField.TYPE_STORED);
                 Field fileNameField = new Field("filename", file.getName(), TextField.TYPE_STORED);
                 Field filePathField = new Field("filepath", file.getCanonicalPath(), TextField.TYPE_STORED);
@@ -149,6 +160,7 @@ public class opgave {
             }
         }
         iwriter.close();
+        // in iwirter per document geindexeerde content / filename/filepath
         return iwriter;
 
     }
