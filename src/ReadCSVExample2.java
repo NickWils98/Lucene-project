@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Dictionary;
@@ -7,6 +8,7 @@ import java.util.Map;
 
 public class ReadCSVExample2
 {
+
     public Map<String, String> parse(String input)
     {
         Map<String, String> d = new Hashtable<>();
@@ -21,7 +23,11 @@ public class ReadCSVExample2
             {
                 if(first) {
                     String[] employee = line.split(splitBy);    // use comma as separator
-                    d.put(employee[0], employee[1]);
+                    if(!d.containsKey(employee[0])){
+                        d.put(employee[0], employee[1]);
+                    } else{
+                        System.out.println("test");
+                    }
                 }
                 else{
                     first = true;
@@ -51,7 +57,7 @@ public class ReadCSVExample2
                     String end = "";
                     for (String s : employee) {
                         if (!s.equals(employee[0])) {
-                            end += s;
+                            end = end + "\t"+s;
                         }
                     }
                     try {

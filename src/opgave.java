@@ -1,4 +1,5 @@
 
+import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
@@ -37,8 +38,6 @@ public class opgave {
                 file.delete();
             }
         }
-
-
     }
 
     public static void runall(IndexWriter iwriter) throws IOException, ParseException {
@@ -71,6 +70,8 @@ public class opgave {
 
 
         }
+        System.out.println(total);
+
     }
 
     public static String tester(String input, IndexWriter iwriter)throws IOException, ParseException {
@@ -88,7 +89,7 @@ public class opgave {
         // Parse a simple query that searches for "text":
         // Ge gaat in contens zoeken
         QueryParser parser = new QueryParser("contents", analyzer);
-        Query query = parser.parse(input); // Welke input da ge ga zoeken
+        Query query = parser.parse(QueryParser.escape(input)); // Welke input da ge ga zoeken
 
         DirectoryReader ireader = DirectoryReader.open(directory); // In i reader nen dicteroy zetten
         IndexSearcher isearcher = new IndexSearcher(ireader); // Met die reader ook een searcher aanmaken
