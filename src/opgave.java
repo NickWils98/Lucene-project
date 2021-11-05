@@ -1,5 +1,4 @@
 
-import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
@@ -13,7 +12,7 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.similarities.BM25Similarity;
+import org.apache.lucene.search.similarities.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.RAMDirectory;
@@ -34,9 +33,9 @@ public class opgave {
             delete indexfiles
          */
         IndexWriter iwriter = index(); // Eerst alles indexen
-//        runall(iwriter);
+        runall(iwriter);
 
-    tester("what are the products and by products of photosynthesis?", iwriter);
+        //tester("what can help arteries dilate", iwriter);
         File folder = new File("./Index/");
         File[] listOfFiles = folder.listFiles();
         for(File file: listOfFiles) {
@@ -51,14 +50,14 @@ public class opgave {
             go over all the queries and see if they are correct
          */
         ReadCSVExample2 parser = new ReadCSVExample2();
-        Map<String, String > r = parser.parse2("./resources/queries/small/dev_queries.tsv");
-        Map<String, String > l = parser.parse("./resources/queries/small/dev_query_results_small.csv");
+        Map<String, String > dev_queries = parser.parse2("./resources/queries/small/dev_queries.tsv"); // OK
+        Map<String, String > dev_queries_results = parser.parse("./resources/queries/small/dev_query_results_small.csv"); // Niet OK
 
         int total = 0;int totalcoorect = 0;int totalfalse = 0;
 
-        for(var k : l.keySet()){
+        for(var query_number : dev_queries_results.keySet()){
             // get query
-            String query = r.get(k);
+            String query = dev_queries.get(query_number); //TODO: Daar sta nog wel een /t voor, is dat ok?
             System.out.println(query);
             // get best result
             String filename = tester(query, iwriter);
@@ -68,7 +67,7 @@ public class opgave {
             String filename2 = filename.split("output_")[1];
             filename2 = filename2.substring(0, filename2.length()-4);
 
-            if(filename2.equals(l.get(k))) {
+            if(filename2.equals(dev_queries_results.get(query_number))) {
                 totalcoorect++;
                 System.out.println(totalcoorect+" Correct " + filename);
             } else{
@@ -90,7 +89,7 @@ public class opgave {
             search trough de Index map en find the best match for the query
 
          */
-        Analyzer analyzer = new ClassicAnalyzer();
+        Analyzer analyzer = new StandardAnalyzer();
 
         Path index = Paths.get("./Index/");
         Directory directory = FSDirectory.open(index);
@@ -108,7 +107,7 @@ public class opgave {
 
         DirectoryReader ireader = DirectoryReader.open(directory); // In i reader nen dicteroy zetten
         IndexSearcher isearcher = new IndexSearcher(ireader); // Met die reader ook een searcher aanmaken
-//        isearcher.setSimilarity(new BM25Similarity());
+        isearcher.setSimilarity(new BM25Similarity());
         ScoreDoc[] hits = isearcher.search(query, 1).scoreDocs;
 //        assertEquals(1, hits.length);
         // Iterate through the results:
@@ -129,6 +128,7 @@ public class opgave {
         return s;
     }
 
+    //TODO: OK, buiten mss die string
     public static IndexWriter index()throws IOException, ParseException {
         /*
         index all the output_xxx.txt files
@@ -136,18 +136,19 @@ public class opgave {
         Analyzer analyzer = new StandardAnalyzer();
 
         // Store the index in memory:
-//    Directory directory = new RAMDirectory();
+        //Directory directory = new RAMDirectory();
+
         // To store an index on disk, use this instead:
-        Path index = Paths.get("./Index/");
+        Path index = Paths.get("./Index/");                         // TODO: Moet daar een _ tussen of is Path een datatype??
         Directory directory = FSDirectory.open(index); // Openen index
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         IndexWriter iwriter = new IndexWriter(directory, config);
         String data = ("./resources/full_docs_small/"); //output stored
-
+        int count = 100;
         File[] files = new File(data).listFiles();
         assert files != null;
         for (File file : files) {
-            // enkel de txt files bekijken TODO kijk of da echt gebeurd
+            // enkel de txt files bekijken
             String extension = ".txt";
 
             try {
@@ -160,6 +161,7 @@ public class opgave {
             }
 
             if (extension.equals(".txt")) {
+                count ++;
                 Document doc = new Document();
                 String filepath = file.getPath(); // relatief path van file
                 String content = Files.readString(Paths.get(filepath)); // first string in file TODO aanpassen
@@ -177,6 +179,7 @@ public class opgave {
         }
         iwriter.close();
         // in iwirter per document geindexeerde content / filename/filepath
+        System.out.println(count);
         return iwriter;
 
     }
