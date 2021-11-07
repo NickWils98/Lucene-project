@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 
 
@@ -23,14 +25,14 @@ public class Parser
         return new String(encoded, StandardCharsets.UTF_8);
     }
 
-    public static Map<String, String> parse(String input, String split_symbol)
+    public static Map<String, List<String>> parse(String input, String split_symbol)
             /*
             Read line by line a csv or tsv file and add each entry to a dictionary
 
             Return the dictionary
              */
     {
-        Map<String, String> dictionary = new Hashtable<>();
+        Map<String, List<String>> dictionary = new Hashtable<>();
         String line;
         try
         {
@@ -59,7 +61,15 @@ public class Parser
                     }
 //                    Add entry in the dictionary
                     try {
-                        dictionary.put(entry[0], value.toString());
+                        if(!dictionary.containsKey(entry[0])){
+                            List<String> valuelist = new ArrayList<>();
+                            valuelist.add(value.toString());
+                            dictionary.put(entry[0], valuelist);
+                        } else {
+                            List<String> valuelist = dictionary.get(entry[0]);
+                            valuelist.add(value.toString());
+                            dictionary.put(entry[0], valuelist);
+                        }
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

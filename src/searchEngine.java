@@ -1,17 +1,19 @@
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.similarities.BM25Similarity;
+import org.apache.lucene.queryparser.flexible.standard.builders.MultiPhraseQueryNodeBuilder;
+import org.apache.lucene.queryparser.flexible.standard.builders.PhraseQueryNodeBuilder;
+import org.apache.lucene.search.*;
+import org.apache.lucene.search.similarities.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
@@ -19,6 +21,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class searchEngine {
@@ -36,13 +40,13 @@ public class searchEngine {
          */
 
 //        Index all the input files
-        index();
+//        index();
 //        Test all the queries with the given solution
-        testAllQueries();
+//        testAllQueries();
 //        Test a single query
-        //tester("what can help arteries dilate");
+//        search("what is a sales cycle process?");
 //        Delete the indexed input files for the next time
-        deleteIndex();
+//        deleteIndex();
     }
 
     public static void deleteIndex() {
@@ -69,8 +73,8 @@ public class searchEngine {
          */
 
 //        Parse the queries and solutions
-        Map<String, String> dev_queries = Parser.parse("./resources/queries/small/dev_queries.tsv", "\t");
-        Map<String, String> dev_queries_results = Parser.parse("./resources/queries/small/dev_query_results_small.csv", ",");
+        Map<String, List<String>> dev_queries = Parser.parse("./resources/queries/large/dev_queries.tsv", "\t");
+        Map<String, List<String>> dev_queries_results = Parser.parse("./resources/queries/large/dev_query_results.csv", ",");
 
 //        Counters
         int total_queries = 0;
@@ -81,26 +85,40 @@ public class searchEngine {
         for (var query_number : dev_queries_results.keySet()) {
 
 //            Get the query
-            String query = dev_queries.get(query_number);
+            List<String>querylist = dev_queries.get(query_number);
+            String query = querylist.get(0);
 //            Get best result
-            String filename = search(query);
+            List<String> filenameList = search(query);
 
 //            Get the number from the filename
-            String number = filename.split("output_")[1];
-            number = number.substring(0, number.length() - 4);
+            try {
+                boolean test = false;
+                for (String filename : filenameList) {
+                    String number = filename.split("output_")[1];
+                    number = number.substring(0, number.length() - 4);
+                    List<String> results = dev_queries_results.get(query_number);
+                    if (results.contains(number)) {
+                        test = true;
+                    } else {
+                    }
+                }
+                if(test){
+                    correct_queries++;
 
-            if (number.equals(dev_queries_results.get(query_number))) {
-                correct_queries++;
-            } else {
-                incorrect_queries++;
+                }else{
+                    incorrect_queries++;
+
+                }
+                total_queries++;
+
+            } catch (Exception e) {
             }
-            total_queries++;
         }
         System.out.println(total_queries + "   correct queries   " + correct_queries + "   incorrect queries   " + incorrect_queries);
 
     }
 
-    public static String search(String input) throws IOException, ParseException {
+    public static List<String> search(String input) throws IOException, ParseException {
         /*
             Search trough de Index map en find the best match for the query
 
@@ -110,6 +128,20 @@ public class searchEngine {
 
         Directory directory = FSDirectory.open(index);
 //        Search in content of documents with the given analyzer
+        String[] queries = input.split(" ");
+//
+
+//        MultiPhraseQuery.Builder builder = new MultiPhraseQuery.Builder();
+//        for(String query : queries){
+//            Term term = new Term("content", query);
+//            builder.add(term);
+////
+//        }
+//        builder.setSlop(99);
+//        MultiPhraseQuery query = builder.build();
+//
+//        System.out.println("Query: " + parser.toString());
+//        FuzzyQuery query = new FuzzyQuery(new Term("content", input), 2,0);
         QueryParser parser = new QueryParser("content", analyzer);
 //        Remove special symbols and give the query
         Query query = parser.parse(QueryParser.escape(input));
@@ -118,23 +150,35 @@ public class searchEngine {
         IndexSearcher isearcher = new IndexSearcher(ireader);
 
 //        Scoring system
-        isearcher.setSimilarity(new BM25Similarity());
+        isearcher.setSimilarity(new BooleanSimilarity());
 
 //        Search the query and given the n best results
         int amount_best_results = 1;
-        ScoreDoc[] hits = isearcher.search(query, amount_best_results).scoreDocs;
+        ScoreDoc[] hits = isearcher.search(query, 10).scoreDocs;
 
 //        Iterate through the results:
+        List<String> best_resultlist = new ArrayList<String>();
+
         for (ScoreDoc hit : hits) {
             Document hitDoc = isearcher.doc(hit.doc);
+            String best_result = hitDoc.get("filename");
+            best_resultlist.add(best_result);
+//            System.out.println(best_result);
         }
 
 //        give the filename of the best result back
-        Document hitDoc = isearcher.doc(hits[0].doc);
-        String best_result = hitDoc.get("filename");
+//        Document hitDoc = isearcher.doc(hits[0].doc);
+//        String best_result = hitDoc.get("filename");
+//
+//        try{
+//            Document hitDoc = isearcher.doc(hits[].doc);
+//            best_result.add(hitDoc.get("filename"));
+//        } catch (Exception e){
+//
+//        }
         ireader.close();
         directory.close();
-        return best_result;
+        return best_resultlist;
     }
 
 
@@ -148,12 +192,11 @@ public class searchEngine {
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         IndexWriter iwriter = new IndexWriter(directory, config);
 //        Where the files are stored
-        String data = ("./resources/full_docs_small/");
+        String data = ("./resources/full_docs/");
 
 //        open all the files
         File[] files = new File(data).listFiles();
         assert files != null;
-
         for (File file : files) {
 //            Only look at txt files
             String extension = "";
@@ -177,6 +220,8 @@ public class searchEngine {
                 String content = Parser.readFile(filepath);
 
 //                Store the content, filename and the path in the document
+
+
                 Field contentField = new Field("content", content, TextField.TYPE_STORED);
                 Field fileNameField = new Field("filename", file.getName(), TextField.TYPE_STORED);
                 Field filePathField = new Field("filepath", file.getCanonicalPath(), TextField.TYPE_STORED);
