@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,7 +13,7 @@ import java.util.Map;
 
 public class Parser
 {
-
+    FileWriter writer;
     static String readFile(String path)
             throws IOException
             /*
@@ -23,6 +24,32 @@ public class Parser
     {
         byte[] encoded = Files.readAllBytes(Paths.get(path));
         return new String(encoded, StandardCharsets.UTF_8);
+    }
+
+    public void closeWriter() throws IOException {
+
+        writer.flush();
+        writer.close();
+    }
+    public void makeNewCsv() throws IOException {
+        writer = new FileWriter("result.csv");
+        writer.append("Query number");
+        writer.append("\t");
+        writer.append("Document number");
+        writer.append("\n");
+
+    }
+
+    public  void write(List<String> results, String query_number) throws IOException {
+        for (String result : results) {
+            String number = result.split("output_")[1];
+            number = number.substring(0, number.length() - 4);
+            writer.append(query_number);
+            writer.append("\t");
+            writer.append(number);
+            writer.append("\n");
+        }
+
     }
 
     public static Map<String, List<String>> parse(String input, String split_symbol)

@@ -1,6 +1,11 @@
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.core.KeywordAnalyzer;
+import org.apache.lucene.analysis.core.SimpleAnalyzer;
+import org.apache.lucene.analysis.core.StopAnalyzer;
+import org.apache.lucene.analysis.core.UnicodeWhitespaceAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.standard.UAX29URLEmailAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.TextField;
@@ -42,9 +47,10 @@ public class searchEngine {
 //        Index all the input files
 //        index();
 //        Test all the queries with the given solution
+        writeMainQueries();
 //        testAllQueries();
 //        Test a single query
-//        search("what is a sales cycle process?");
+//        search("in chemical form what do subscripts tell you");
 //        Delete the indexed input files for the next time
 //        deleteIndex();
     }
@@ -66,7 +72,22 @@ public class searchEngine {
         }
     }
 
-    public static void testAllQueries() throws IOException, ParseException {
+        public static void writeMainQueries() throws IOException, ParseException {
+            Map<String, List<String>> main_queries = Parser.parse("./resources/queries/main/queries.csv", "\t");
+            Parser p = new Parser();
+            p.makeNewCsv();
+            for(int i = 1; i<main_queries.size()+1; i++){
+                String s = String.valueOf(i);
+                List<String> querylist = main_queries.get(s);
+                String query = querylist.get(0);
+                List<String> results = search(query);
+                p.write(results, s);
+//                System.out.println(query);
+            }
+            p.closeWriter();
+        }
+
+        public static void testAllQueries() throws IOException, ParseException {
         /*
             Go over all the queries and see if they are correct
 
@@ -99,17 +120,20 @@ public class searchEngine {
                     List<String> results = dev_queries_results.get(query_number);
                     if (results.contains(number)) {
                         test = true;
+                        correct_queries++;
+
                     } else {
+                        incorrect_queries++;
+
                     }
+                    total_queries++;
+
                 }
                 if(test){
-                    correct_queries++;
 
                 }else{
-                    incorrect_queries++;
 
                 }
-                total_queries++;
 
             } catch (Exception e) {
             }
@@ -150,11 +174,11 @@ public class searchEngine {
         IndexSearcher isearcher = new IndexSearcher(ireader);
 
 //        Scoring system
-        isearcher.setSimilarity(new BooleanSimilarity());
+        isearcher.setSimilarity(new BM25Similarity());
 
 //        Search the query and given the n best results
-        int amount_best_results = 1;
-        ScoreDoc[] hits = isearcher.search(query, 10).scoreDocs;
+        int amount_best_results = 10;
+        ScoreDoc[] hits = isearcher.search(query, amount_best_results).scoreDocs;
 
 //        Iterate through the results:
         List<String> best_resultlist = new ArrayList<String>();
