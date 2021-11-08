@@ -1,2 +1,4 @@
 # Lucene-project
-The large database set was to big to upload to github, so this folder has to be put in the resources map, next to the full_docs_small. The small database set is uploaded to github so this one does not have to be put somewhere. 
+To run this project you need to alter the path of "database" in SearchEngine (line 33).
+
+to run this project you can comment out/in lines from the main() function in SearchEngin.py.
