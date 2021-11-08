@@ -25,10 +25,15 @@ import java.util.Map;
 
 public class searchEngine {
 
-    //    path where the indexing is stored
+    //    Path where the indexing is stored
     static final Path index = Paths.get("./Index/");
     //    Analyzer that is used
     static final Analyzer analyzer = new ClassicAnalyzer();
+    //    Path where the database is
+    static final String database = ("./resources/full_docs_small/");
+    //    Amount of returned results
+    static final int amount_best_results = 1;
+
 
 
     public static void main(String[] args) throws IOException, ParseException {
@@ -37,14 +42,19 @@ public class searchEngine {
 
          */
 
-//        Index all the input files
+        //Index all the input files
         index();
-//        Test all the queries with the given solution
-        writeMainQueries();
+
+        //Write main queries to a file
+//        writeMainQueries();
+
+        //Test all the queries with the given solution
 //        testAllQueries();
-//        Test a single query
-//        search("in chemical form what do subscripts tell you");
-//        Delete the indexed input files for the next time
+
+        //Test a single query
+        search("Put your query here", true);
+
+        //Delete the indexed input files for the next time
         deleteIndex();
     }
 
@@ -81,7 +91,7 @@ public class searchEngine {
             String s = String.valueOf(i);
             List<String> querylist = main_queries.get(s);
             String query = querylist.get(0);
-            List<String> results = search(query);
+            List<String> results = search(query, false);
             p.write(results, s);
         }
 //            close the csv file
@@ -95,8 +105,8 @@ public class searchEngine {
          */
 
 //        Parse the queries and solutions
-        Map<String, List<String>> dev_queries = Parser.parse("./resources/queries/large/dev_queries.tsv", "\t");
-        Map<String, List<String>> dev_queries_results = Parser.parse("./resources/queries/large/dev_query_results.csv", ",");
+        Map<String, List<String>> dev_queries = Parser.parse("./resources/queries/small/dev_queries.tsv", "\t");
+        Map<String, List<String>> dev_queries_results = Parser.parse("./resources/queries/small/dev_query_results_small.csv", ",");
 
 //        Counters
         int total_queries = 0;
@@ -110,7 +120,7 @@ public class searchEngine {
             List<String> querylist = dev_queries.get(query_number);
             String query = querylist.get(0);
 //            Get best result
-            List<String> filenameList = search(query);
+            List<String> filenameList = search(query, false);
 
 //            Get the number from the filename
             try {
@@ -133,11 +143,12 @@ public class searchEngine {
             } catch (Exception ignored) {
             }
         }
-        System.out.println(total_queries + "   correct queries   " + correct_queries + "   incorrect queries   " + incorrect_queries);
+        System.out.println("Total queries: " + total_queries + "\nCorrect queries: " +
+                correct_queries + "\nIncorrect queries: " + incorrect_queries);
 
     }
 
-    public static List<String> search(String input) throws IOException, ParseException {
+    public static List<String> search(String input, boolean single_search) throws IOException, ParseException {
         /*
             Search trough de Index map en find the best match for the query
 
@@ -158,7 +169,6 @@ public class searchEngine {
         isearcher.setSimilarity(new BM25Similarity());
 
 //        Search the query and given the n best results
-        int amount_best_results = 10;
         ScoreDoc[] hits = isearcher.search(query, amount_best_results).scoreDocs;
 
 //        Iterate through the results:
@@ -168,6 +178,9 @@ public class searchEngine {
             Document hitDoc = isearcher.doc(hit.doc);
             String best_result = hitDoc.get("filename");
             best_resultlist.add(best_result);
+            if(single_search) {
+                System.out.println(best_result);
+            }
         }
 
         ireader.close();
@@ -186,10 +199,9 @@ public class searchEngine {
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         IndexWriter iwriter = new IndexWriter(directory, config);
 //        Where the files are stored
-        String data = ("./resources/full_docs/");
 
 //        open all the files
-        File[] files = new File(data).listFiles();
+        File[] files = new File(database).listFiles();
         assert files != null;
         for (File file : files) {
 //            Only look at txt files
