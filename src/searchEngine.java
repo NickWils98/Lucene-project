@@ -1,24 +1,17 @@
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.core.KeywordAnalyzer;
-import org.apache.lucene.analysis.core.SimpleAnalyzer;
-import org.apache.lucene.analysis.core.StopAnalyzer;
-import org.apache.lucene.analysis.core.UnicodeWhitespaceAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.standard.UAX29URLEmailAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.queryparser.flexible.standard.builders.MultiPhraseQueryNodeBuilder;
-import org.apache.lucene.queryparser.flexible.standard.builders.PhraseQueryNodeBuilder;
-import org.apache.lucene.search.*;
-import org.apache.lucene.search.similarities.*;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
@@ -32,9 +25,9 @@ import java.util.Map;
 
 public class searchEngine {
 
-//    path where the indexing is stored
+    //    path where the indexing is stored
     static final Path index = Paths.get("./Index/");
-//    Analyzer that is used
+    //    Analyzer that is used
     static final Analyzer analyzer = new ClassicAnalyzer();
 
 
@@ -45,14 +38,14 @@ public class searchEngine {
          */
 
 //        Index all the input files
-//        index();
+        index();
 //        Test all the queries with the given solution
         writeMainQueries();
 //        testAllQueries();
 //        Test a single query
 //        search("in chemical form what do subscripts tell you");
 //        Delete the indexed input files for the next time
-//        deleteIndex();
+        deleteIndex();
     }
 
     public static void deleteIndex() {
@@ -72,22 +65,30 @@ public class searchEngine {
         }
     }
 
-        public static void writeMainQueries() throws IOException, ParseException {
-            Map<String, List<String>> main_queries = Parser.parse("./resources/queries/main/queries.csv", "\t");
-            Parser p = new Parser();
-            p.makeNewCsv();
-            for(int i = 1; i<main_queries.size()+1; i++){
-                String s = String.valueOf(i);
-                List<String> querylist = main_queries.get(s);
-                String query = querylist.get(0);
-                List<String> results = search(query);
-                p.write(results, s);
-//                System.out.println(query);
-            }
-            p.closeWriter();
-        }
+    public static void writeMainQueries() throws IOException, ParseException {
+        /*
+            Go over all the queries and output the results
 
-        public static void testAllQueries() throws IOException, ParseException {
+         */
+
+//            Get all the queries
+        Map<String, List<String>> main_queries = Parser.parse("./resources/queries/main/queries.csv", "\t");
+//            The parser where we open a new csv file
+        Parser p = new Parser();
+        p.makeNewCsv();
+//            For each query -> find the top 10 results and write them to the csv file
+        for (int i = 1; i < main_queries.size() + 1; i++) {
+            String s = String.valueOf(i);
+            List<String> querylist = main_queries.get(s);
+            String query = querylist.get(0);
+            List<String> results = search(query);
+            p.write(results, s);
+        }
+//            close the csv file
+        p.closeWriter();
+    }
+
+    public static void testAllQueries() throws IOException, ParseException {
         /*
             Go over all the queries and see if they are correct
 
@@ -106,20 +107,20 @@ public class searchEngine {
         for (var query_number : dev_queries_results.keySet()) {
 
 //            Get the query
-            List<String>querylist = dev_queries.get(query_number);
+            List<String> querylist = dev_queries.get(query_number);
             String query = querylist.get(0);
 //            Get best result
             List<String> filenameList = search(query);
 
 //            Get the number from the filename
             try {
-                boolean test = false;
                 for (String filename : filenameList) {
                     String number = filename.split("output_")[1];
                     number = number.substring(0, number.length() - 4);
                     List<String> results = dev_queries_results.get(query_number);
+
+//                    Count the times we had the right output file
                     if (results.contains(number)) {
-                        test = true;
                         correct_queries++;
 
                     } else {
@@ -129,13 +130,7 @@ public class searchEngine {
                     total_queries++;
 
                 }
-                if(test){
-
-                }else{
-
-                }
-
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
         System.out.println(total_queries + "   correct queries   " + correct_queries + "   incorrect queries   " + incorrect_queries);
@@ -146,26 +141,12 @@ public class searchEngine {
         /*
             Search trough de Index map en find the best match for the query
 
-            Return the best result
+            Return the best 10 results
 
          */
 
         Directory directory = FSDirectory.open(index);
 //        Search in content of documents with the given analyzer
-        String[] queries = input.split(" ");
-//
-
-//        MultiPhraseQuery.Builder builder = new MultiPhraseQuery.Builder();
-//        for(String query : queries){
-//            Term term = new Term("content", query);
-//            builder.add(term);
-////
-//        }
-//        builder.setSlop(99);
-//        MultiPhraseQuery query = builder.build();
-//
-//        System.out.println("Query: " + parser.toString());
-//        FuzzyQuery query = new FuzzyQuery(new Term("content", input), 2,0);
         QueryParser parser = new QueryParser("content", analyzer);
 //        Remove special symbols and give the query
         Query query = parser.parse(QueryParser.escape(input));
@@ -187,19 +168,8 @@ public class searchEngine {
             Document hitDoc = isearcher.doc(hit.doc);
             String best_result = hitDoc.get("filename");
             best_resultlist.add(best_result);
-//            System.out.println(best_result);
         }
 
-//        give the filename of the best result back
-//        Document hitDoc = isearcher.doc(hits[0].doc);
-//        String best_result = hitDoc.get("filename");
-//
-//        try{
-//            Document hitDoc = isearcher.doc(hits[].doc);
-//            best_result.add(hitDoc.get("filename"));
-//        } catch (Exception e){
-//
-//        }
         ireader.close();
         directory.close();
         return best_resultlist;
@@ -244,8 +214,6 @@ public class searchEngine {
                 String content = Parser.readFile(filepath);
 
 //                Store the content, filename and the path in the document
-
-
                 Field contentField = new Field("content", content, TextField.TYPE_STORED);
                 Field fileNameField = new Field("filename", file.getName(), TextField.TYPE_STORED);
                 Field filePathField = new Field("filepath", file.getCanonicalPath(), TextField.TYPE_STORED);
